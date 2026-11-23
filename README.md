@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TYPESET
 
-## Getting Started
+A typography exploration and font pairing playground. Pair a heading and body face from Google Fonts, tune weight, size, line height, letter spacing, alignment and case, edit the sample text in place, then save, share or export the result.
 
-First, run the development server:
+## Run
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Checks:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run lint && npm run typecheck && npm run check:logic && npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Fonts and the optional API key
 
-## Learn More
+TYPESET works with no configuration. It ships a curated catalog of about 120 Google Fonts families (`src/lib/typography/catalog.ts`) whose weights are verified against the Google Fonts CSS2 API.
 
-To learn more about Next.js, take a look at the following resources:
+To browse the full library, set a Google Fonts Developer API key on the server:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+cp .env.example .env.local
+# then fill in GOOGLE_FONTS_API_KEY
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The key is read only in `src/app/api/fonts/route.ts`, never sent to the browser. The catalog response is cached for a day on the server and in `localStorage` on the client. If the key is missing or the request fails, the route falls back to the curated list.
 
-## Deploy on Vercel
+Fonts load on demand, one family and weight at a time. Pickers and preset labels fetch only the glyphs of each font's name. A face that fails or times out (8 s) shows a notice and renders in a system fallback stack for its category.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## How state works
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **URL:** the current pairing is always encoded in `?t=` (base64url JSON), so the address bar is a share link. Decoded values are validated and clamped (`sanitizeConfig`).
+- **localStorage:** the last session (pairing and sample text) and saved pairings. Corrupt or invalid entries are dropped field by field. Storage failures never throw.
+- Load priority: shared link, then last session, then the Editorial preset.
+
+## Layout
+
+```
+src/lib/typography/   types, catalog, presets, validation, share codec, CSS/JSON export
+src/lib/              font loader, storage, clipboard
+src/hooks/            catalog, font status, saved pairings
+src/components/       Playground, Preview, StylePanel, FontPicker, dialogs, ui primitives
+src/app/api/fonts/    server-side Google Fonts catalog
+scripts/selfcheck.ts  assertion checks for share round-trips, sanitizing and preset weights
+```
